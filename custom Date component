@@ -1,0 +1,208 @@
+var columnDefs = [{
+  headerName: "Date",
+  field: "date",
+  width: 300,
+  filter: 'agDateColumnFilter',
+  filterParams: {
+    comparator: function(filterLocalDate, cellValue) {
+      filterLocalDate.setMilliseconds(0);
+      cellValue.setMilliseconds(0);
+      let filterBy = filterLocalDate.getTime();
+      let filterMe = cellValue.getTime();
+      if (filterBy == filterMe) {
+        return 0;
+      }
+
+      if (filterMe < filterBy) {
+        return -1;
+      }
+
+      if (filterMe > filterBy) {
+        return 1;
+      }
+    }
+  }
+}, {
+  headerName: "Sport",
+  field: "sport",
+  width: 110
+}, {
+  headerName: "Gold",
+  field: "gold",
+  width: 100,
+  filter: 'agNumberColumnFilter'
+}, {
+  headerName: "Silver",
+  field: "silver",
+  width: 100,
+  filter: 'agNumberColumnFilter'
+}, {
+  headerName: "Bronze",
+  field: "bronze",
+  width: 100,
+  filter: 'agNumberColumnFilter'
+}, {
+  headerName: "Total",
+  field: "total",
+  width: 100,
+  filter: 'agNumberColumnFilter',
+  suppressFilter: true
+}];
+
+var gridOptions = {
+  columnDefs: columnDefs,
+  rowData: null,
+  enableFilter: true,
+  components:{
+      agDateInput: CustomDateComponent
+  }
+};
+
+function CustomDateComponent() {}
+
+CustomDateComponent.prototype.init = function(params) {
+  this.params = params;
+  this.eGui = document.createElement('div');
+  this.eGui.innerHTML = `
+    <span class="reset">x</span>
+    <input class="dd" placeholder="dd" maxLength="2" />
+    <span class="divider"></span>
+    <input class="mm" placeholder="mm" maxLength="2" />
+    <span class="divider"></span>
+    <input class="yyyy" placeholder="yyyy" maxLength="4"/>
+    <span class="divider"></span>
+    <input class="hh" placeholder="hh" maxLength="2"/>
+    <span class="divider"></span>:
+    <input class="min" placeholder="mm" maxLength="2" />
+    <span class="divider"></span>:
+    <input class="ss" placeholder="ss"maxLength="2" />
+  `;
+  this.eGui.className = 'filter';
+  
+  this.eReset = this.eGui.querySelector('.reset');
+  this.eDD = this.eGui.querySelector('.dd');
+  this.eMM = this.eGui.querySelector('.mm');
+  this.eYYYY = this.eGui.querySelector('.yyyy');
+  this.eHH = this.eGui.querySelector('.hh');
+  this.eMIN = this.eGui.querySelector('.min');
+  this.eSS = this.eGui.querySelector('.ss');
+  
+  this.bindListeners();
+}
+
+CustomDateComponent.prototype.bindListeners = function() {
+  this.resetDateListener = this.onResetDate.bind(this);
+  this.dateChangedListener = this.onDateChanged.bind(this);
+  
+  this.eReset.addEventListener('click', this.resetDateListener);
+  this.eDD.addEventListener('input', this.dateChangedListener);
+  this.eMM.addEventListener('input', this.dateChangedListener);
+  this.eYYYY.addEventListener('input', this.dateChangedListener);
+  this.eHH.addEventListener('input', this.dateChangedListener);
+  this.eMIN.addEventListener('input', this.dateChangedListener);
+  this.eSS.addEventListener('input', this.dateChangedListener);
+}
+
+CustomDateComponent.prototype.onDateChanged = function () {
+    this.date = this.parseDate(
+        this.eDD.value,
+        this.eMM.value,
+        this.eYYYY.value,
+        this.eHH.value,
+        this.eMIN.value,
+        this.eSS.value
+    );
+    this.params.onDateChanged();
+};
+
+CustomDateComponent.prototype.parseDate = function(dd, mm, yyyy, hh, min, ss) {
+  if (dd.trim() === '' || mm.trim() === '' || yyyy.trim() === '' || hh.trim() === '' || min.trim() === '' || ss.trim() === '') {
+    return null;
+  }
+  let day = Number(dd);
+  let month = Number(mm);
+  let year = Number(yyyy);
+  let hour = Number(hh);
+  let minute = Number(min);
+  let seconds = Number(ss);
+  
+  let date = new Date(year, month - 1, day, hour, minute, seconds);
+  
+  if (isNaN(date.getTime())) {
+    return null;
+  }
+  
+  // return null if bad date
+  if (date.getDate() !== day || date.getMonth() + 1 !== month || date.getFullYear() !== year) {
+    return null;
+  }
+
+  return date;
+}
+
+CustomDateComponent.prototype.onResetDate = function() {
+  this.setDate(null);
+  this.params.onDateChanged();
+}
+
+CustomDateComponent.prototype.getGui = function() {
+  return this.eGui;
+}
+
+CustomDateComponent.prototype.getDate = function() {
+  return this.date;
+}
+
+CustomDateComponent.prototype.setDate = function(date) {
+  if (!date) {
+    this.eDD.value = '';
+    this.eMM.value = '';
+    this.eYYYY.value = '';
+    this.eHH.value = '';
+    this.eMIN.value = '';
+    this.eSS.value = '';
+    this.date = null;
+  } else {
+    this.eDD.value = date.getDate() + '';
+    this.eMM.value = (date.getMonth() + 1) + '';
+    this.eYYYY.value = date.getFullYear() + '';
+    this.eHH.value = (date.getHours() + 1) + '';
+    this.eMIN.value = (date.getMinutes() + 1) + '';
+    this.eSS.value = date.getSeconds() + '';
+    this.date = date;
+  }
+}
+
+CustomDateComponent.prototype.destroy = function() {
+  this.eReset.removeEventListener('click', this.resetDateListener);
+  this.eDD.removeEventListener('input', this.dateChangedListener);
+  this.eMM.removeEventListener('input', this.dateChangedListener);
+  this.eYYYY.removeEventListener('input', this.dateChangedListener);
+  this.eHH.removeEventListener('input', this.dateChangedListener);
+  this.eMIN.removeEventListener('input', this.dateChangedListener);
+}
+
+// setup the grid after the page has finished loading
+document.addEventListener('DOMContentLoaded', function() {
+  var gridDiv = document.querySelector('#myGrid');
+  new agGrid.Grid(gridDiv, gridOptions);
+
+  // do http request to get our sample data - not using any framework to keep the example self contained.
+  // you will probably use a framework like JQuery, Angular or something else to do your HTTP calls.
+  var httpRequest = new XMLHttpRequest();
+  httpRequest.open('GET', 'https://raw.githubusercontent.com/ag-grid/ag-grid/master/packages/ag-grid-docs/src/olympicWinners.json');
+  httpRequest.send();
+  httpRequest.onreadystatechange = function() {
+    if (httpRequest.readyState === 4 && httpRequest.status === 200) {
+      var httpResult = JSON.parse(httpRequest.responseText);
+
+      function randomDate(start, end) {
+        return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+      }
+      httpResult.forEach(r => {
+        r.date = randomDate(new Date(2012, 0, 1), new Date());
+      })
+      gridOptions.api.setRowData(httpResult);
+    }
+  };
+});
